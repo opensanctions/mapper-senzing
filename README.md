@@ -1,18 +1,19 @@
-# mapper-opensanctions
+# Senzing JSON generator
 
-This is a simple mapper to convert the OpenSanctions Consolidated Sanctioned Enttities simplified CSV list to JSON that can be loaded into Senzing.
+This is a simple mapper to convert the [OpenSanctions Consolidated Sanctioned Entities](https://www.opensanctions.org/datasets/sanctions/) to JSON that can be loaded into Senzing.
 
-https://www.opensanctions.org/datasets/sanctions/
+The data is automatically converted every day by the GitHub Actions associated with this repository. You can fetch the Senzing form of the data from these URLs:
 
+* https://data.opensanctions.org/contrib/senzing/exports/sanctions.json (Sanctions data)
+* https://data.opensanctions.org/contrib/senzing/exports/default.json (Full OpenSanctions with PEPs)
 
-To run the tool:
- * install the orjson module: python3 -m pip install orjson
+Download the files and then add the OPENSANCTIONS data source to the Senzing configuration and load the JSON file in.
 
- * convert the CSV to Senzing JSON redirecting the output to a file: python3 opensanctions_process.py targets.simple.csv > os.json
+### Running the processor locally
 
-Then add the OPENSANCTIONS data source to the Senzing configuration and load the os.json file.
-
+Install the dependencies in `requirements.txt` and then check out the `Makefile` to see how to run the processor locally. 
 
 ### Senzing format documentation
 
+* https://senzing.zendesk.com/hc/en-us/articles/231925448-Generic-Entity-Specification-JSON-CSV-Mapping
 * https://senzing.zendesk.com/hc/en-us/article_attachments/4405461248915/Senzing_Generic_Entity_Specification_v2.8.1.pdf 
