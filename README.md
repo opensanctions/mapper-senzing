@@ -12,3 +12,7 @@ To run the tool:
 
 Then add the OPENSANCTIONS data source to the Senzing configuration and load the os.json file.
 
+
+### Senzing format documentation
+
+* https://senzing.zendesk.com/hc/en-us/article_attachments/4405461248915/Senzing_Generic_Entity_Specification_v2.8.1.pdf 
