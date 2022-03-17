@@ -2,36 +2,44 @@ import json
 import click
 import logging
 from pprint import pprint
-from typing import Dict
+from typing import Dict, List
 
 from followthemoney import model
 from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
 
 log = logging.getLogger("ftm_processor")
-ENTITIES: Dict[str, EntityProxy] = {}
+ADDRESSES: Dict[str, EntityProxy] = {}
+IDENTS: Dict[str, List[EntityProxy]] = {}
 
 
 def read_entities(source_file):
+    log.info("Caching aux entities: %r", source_file)
+    with open(source_file, "r") as fh:
+        while line := fh.readline():
+            data = json.loads(line)
+            entity = model.get_proxy(data)
+            if entity.schema.is_a("Address"):
+                ADDRESSES[entity.id] = entity
+            if entity.schema.is_a("Identification"):
+                for holder in entity.get("holder"):
+                    if holder not in IDENTS:
+                        IDENTS[holder] = []
+                    IDENTS[holder].append(entity)
+
     log.info("Reading entities: %r", source_file)
     with open(source_file, "r") as fh:
         while line := fh.readline():
             data = json.loads(line)
             entity = model.get_proxy(data)
-            ENTITIES[entity.id] = entity
-    log.info("Loaded %d entities", len(ENTITIES))
-
-
-def iter_entities():
-    for entity in ENTITIES.values():
-        if entity.schema.name in (
-            "Person",
-            "Organization",
-            "Company",
-            "LegalEntity",
-            "PublicBody",
-        ):
-            yield entity
+            if entity.schema.name in (
+                "Person",
+                "Organization",
+                "Company",
+                "LegalEntity",
+                "PublicBody",
+            ):
+                yield entity
 
 
 def map_feature(entity, features, prop, attr):
@@ -59,7 +67,7 @@ def transform(entity: EntityProxy):
         features.append(name)
 
     for addr_id in entity.get("addressEntity"):
-        addr = ENTITIES.get(addr_id)
+        addr = ADDRESSES.get(addr_id)
         addr_data = {
             "ADDR_FULL": addr.first("full"),
             "ADDR_LINE1": addr.first("street"),
@@ -75,7 +83,7 @@ def transform(entity: EntityProxy):
         if gender == "male":
             features.append({"GENDER": "M"})
         if gender == "female":
-            features.append({"GENDER": "M"})
+            features.append({"GENDER": "F"})
 
     map_feature(entity, features, "birthDate", "DATE_OF_BIRTH")
     map_feature(entity, features, "deathDate", "DATE_OF_DEATH")
@@ -91,22 +99,19 @@ def transform(entity: EntityProxy):
     map_feature(entity, features, "idNumber", "NATIONAL_ID_NUMBER")
     map_feature(entity, features, "taxNumber", "TAX_ID_NUMBER")
 
-    for adj in ENTITIES.values():
-        if not adj.schema.is_a("Identification"):
-            continue
-        if entity.id not in adj.get("holder"):
-            continue
+    for adj in IDENTS.get(entity.id, []):
         if adj.schema.is_a("Passport"):
             adj_data = {
                 "PASSPORT_NUMBER": adj.first("number"),
                 "PASSPORT_COUNTRY": adj.first("country"),
             }
-            features.append(adj_data)
         else:
             adj_data = {
                 "NATIONAL_ID_NUMBER": adj.first("number"),
                 "NATIONAL_ID_COUNTRY": adj.first("country"),
             }
+        adj_data = {k: v for k, v in adj_data.items() if v is not None}
+        if len(adj_data):
             features.append(adj_data)
 
     record["FEATURES"] = features
@@ -118,10 +123,9 @@ def transform(entity: EntityProxy):
 @click.argument("target_file", type=click.Path())
 def process_senzing(source_file, target_file):
     logging.basicConfig(level=logging.INFO)
-    read_entities(source_file)
 
     with open(target_file, "w") as fh:
-        for entity in iter_entities():
+        for entity in read_entities(source_file):
             record = transform(entity)
             fh.write(json.dumps(record))
             fh.write("\n")
