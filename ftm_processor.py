@@ -47,9 +47,9 @@ def map_feature(entity, features, prop, attr):
         features.append({attr: value})
 
 
-def transform(entity: EntityProxy):
+def transform(data_source: str, entity: EntityProxy):
     record = {
-        "DATA_SOURCE": "OPENSANCTIONS",
+        "DATA_SOURCE": data_source,
         "RECORD_ID": entity.id,
     }
     if entity.schema.name == "Person":
@@ -68,6 +68,8 @@ def transform(entity: EntityProxy):
 
     for addr_id in entity.get("addressEntity"):
         addr = ADDRESSES.get(addr_id)
+        if addr is None:
+            continue
         addr_data = {
             "ADDR_FULL": addr.first("full"),
             "ADDR_LINE1": addr.first("street"),
@@ -119,14 +121,15 @@ def transform(entity: EntityProxy):
 
 
 @click.command()
+@click.argument("data_source", type=click.STRING)
 @click.argument("source_file", type=click.Path(exists=True, file_okay=True))
 @click.argument("target_file", type=click.Path())
-def process_senzing(source_file, target_file):
+def process_senzing(data_source, source_file, target_file):
     logging.basicConfig(level=logging.INFO)
 
     with open(target_file, "w") as fh:
         for entity in read_entities(source_file):
-            record = transform(entity)
+            record = transform(data_source, entity)
             fh.write(json.dumps(record))
             fh.write("\n")
 

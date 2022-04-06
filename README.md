@@ -9,7 +9,7 @@ The data is automatically converted every day by the GitHub Actions associated w
 
 Download the files and then add the OPENSANCTIONS data source to the Senzing configuration and load the JSON file in.
 
-**IMPORTANT:** Please be advised that OpenSanctions data is subject to non-commercial licensing conditions. If you intend to use it in a commercial setting, please refer to the [data licensing](https://opensanctions.org/licensing/) page.
+**IMPORTANT:** Please be advised that OpenSanctions data is subject to non-commercial licensing conditions (CC-BY-NC). If you intend to use it in a commercial setting, please refer to the [data licensing](https://opensanctions.org/licensing/) page.
 
 ### Running the processor locally
 
