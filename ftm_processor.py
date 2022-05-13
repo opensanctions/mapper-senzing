@@ -1,3 +1,4 @@
+import re
 import json
 import click
 import logging
@@ -9,8 +10,14 @@ from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
 
 log = logging.getLogger("ftm_processor")
+QID = re.compile(r"^Q\d+$")
 ADDRESSES: Dict[str, EntityProxy] = {}
 IDENTS: Dict[str, List[EntityProxy]] = {}
+
+
+def is_qid(text: str) -> bool:
+    """Determine if the given string is a valid wikidata QID."""
+    return QID.match(text) is not None
 
 
 def read_entities(source_file):
@@ -115,6 +122,21 @@ def transform(data_source: str, entity: EntityProxy):
         adj_data = {k: v for k, v in adj_data.items() if v is not None}
         if len(adj_data):
             features.append(adj_data)
+
+    if is_qid(entity.id):
+        features.append(
+            {
+                "TRUSTED_ID_TYPE": "WIKIDATA",
+                "TRUSTED_ID_NUMBER": entity.id,
+            }
+        )
+    elif entity.has("wikidataId"):
+        features.append(
+            {
+                "TRUSTED_ID_TYPE": "WIKIDATA",
+                "TRUSTED_ID_NUMBER": entity.first("wikidataId"),
+            }
+        )
 
     record["FEATURES"] = features
     return record
